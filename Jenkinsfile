@@ -3,18 +3,7 @@ pipeline {
     options {
         skipDefaultCheckout(true)
     }
-    environment {
-        PROJECT_NAME = 'UnknownProject'
-        BASE_NAME = ''
-        JENKINS_DEPLOY_DIRECTORY = ''
-        CODEBASE_VOLUME_NAME = ''
-        CURRENT_ENV = ''
-        CONTAINER_NAME = ''
-        NETWORK_NAME = ''
-        COMPOSER_PROJECT_NAME = ''
-        SECRET_FILE_CREDENTIALS_ID = ''
-        APP_PORT = ''
-    }
+
     stages {
         stage('Prepare') {
             stages {
@@ -24,12 +13,27 @@ pipeline {
                         checkout scm
                     }
                 }
-                stage('Load Config') {
+                stage('Loading Environment Configuration') {
                     steps {
-                        def config = load 'jenkins.config'
+                        script {
+                            PROJECT_NAME = 'UnknownProject'
+                            BASE_NAME = ''
+                            JENKINS_DEPLOY_DIRECTORY = ''
+                            CODEBASE_VOLUME_NAME = ''
+                            CURRENT_ENV = ''
+                            CONTAINER_NAME = ''
+                            NETWORK_NAME = ''
+                            COMPOSER_PROJECT_NAME = ''
+                            SECRET_FILE_CREDENTIALS_ID = ''
+                            APP_PORT = ''
+                            def config = load 'jenkins.config'
+
+                            // Use the value in subsequent steps
+                            echo "Value of 'Project Name': ${config.project_name}"
+                        }
                     }
                 }
-                stage('Determine Environment') {
+                stage('Determining Environment and Updating Env Vars') {
                     steps {
                         script {
                             switch (env.BRANCH_NAME) {
@@ -49,12 +53,6 @@ pipeline {
                             if (CURRENT_ENV == null) {
                                 error("No valid environment detected for branch ${env.BRANCH_NAME}. Failing the pipeline.")
                             }
-                        }
-                    }
-                }
-                stage('Loading Environment Configuration') {
-                    steps {
-                        script {
 
                             BASE_NAME = "${PROJECT_NAME}_${CURRENT_ENV}"
                             CONTAINER_NAME = "${BASE_NAME}_app"
@@ -70,10 +68,11 @@ pipeline {
                                     APP_PORT = '8001'
                                 break case 'prod':
                                     APP_PORT = '8000'
-                            }                            
+                            }  
                         }
                     }
                 }
+
                 stage('Confirm Production Deployment') {
                     when {
                         expression {
