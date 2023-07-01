@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "aa322c53454393ed775cfe4807d54a50",
+    "content-hash": "96a90df485bc63f1795dbc0ff609188c",
     "packages": [
         {
             "name": "brick/math",
@@ -5505,6 +5505,47 @@
                 "source": "https://github.com/webmozarts/assert/tree/1.11.0"
             },
             "time": "2022-06-03T18:03:27+00:00"
+        },
+        {
+            "name": "xtraorange/jenkinize_laravel",
+            "version": "v0.1.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/xtraorange/JenkinizeLaravel.git",
+                "reference": "140cddd1554de310431f4db609fb1d6a7992023c"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/xtraorange/JenkinizeLaravel/zipball/140cddd1554de310431f4db609fb1d6a7992023c",
+                "reference": "140cddd1554de310431f4db609fb1d6a7992023c",
+                "shasum": ""
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Xtraorange\\JenkinizeLaravel\\JenkinizeLaravelServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Xtraorange\\JenkinizeLaravel\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "authors": [
+                {
+                    "name": "xtraorange",
+                    "email": "xtraorange@gmail.com"
+                }
+            ],
+            "description": "Create an CI/CD pipeline in any Laravel project with fewer steps.",
+            "support": {
+                "issues": "https://github.com/xtraorange/JenkinizeLaravel/issues",
+                "source": "https://github.com/xtraorange/JenkinizeLaravel/tree/v0.1.1"
+            },
+            "time": "2023-07-01T21:43:52+00:00"
         }
     ],
     "packages-dev": [
