@@ -56,21 +56,21 @@ pipeline {
                     steps {
                         script {
 
-                                BASE_NAME = "${PROJECT_NAME}_${CURRENT_ENV}"
-                                CONTAINER_NAME = "${BASE_NAME}_app"
-                                NETWORK_NAME = "${BASE_NAME}_network"
-                                CODEBASE_VOLUME_NAME = "${BASE_NAME}_codebase"
-                                JENKINS_DEPLOY_DIRECTORY = "var/deploy/${CURRENT_ENV}/${CURRENT_ENV}"
-                                COMPOSER_PROJECT_NAME = "${BASE_NAME}"
-                                SECRET_FILE_CREDENTIALS_ID = "${BASE_NAME}_env"
-                                switch (CURRENT_ENV) {
-                                    case 'test':
-                                        APP_PORT = '8002'
-                                    break case 'stage':
-                                        APP_PORT = '8001'
-                                    break case 'prod':
-                                        APP_PORT = '8000'
-                                }                            }
+                            BASE_NAME = "${PROJECT_NAME}_${CURRENT_ENV}"
+                            CONTAINER_NAME = "${BASE_NAME}_app"
+                            NETWORK_NAME = "${BASE_NAME}_network"
+                            CODEBASE_VOLUME_NAME = "${BASE_NAME}_codebase"
+                            JENKINS_DEPLOY_DIRECTORY = "var/deploy/${CURRENT_ENV}/${CURRENT_ENV}"
+                            COMPOSER_PROJECT_NAME = "${BASE_NAME}"
+                            SECRET_FILE_CREDENTIALS_ID = "${BASE_NAME}_env"
+                            switch (CURRENT_ENV) {
+                                case 'test':
+                                    APP_PORT = '8002'
+                                break case 'stage':
+                                    APP_PORT = '8001'
+                                break case 'prod':
+                                    APP_PORT = '8000'
+                            }                            
                         }
                     }
                 }
