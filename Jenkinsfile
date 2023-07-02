@@ -1,3 +1,5 @@
+def test = 'it worked!'
+
 pipeline {
     agent any
     options {
@@ -11,6 +13,8 @@ pipeline {
                     steps {
                         cleanWs()
                         checkout scm
+
+                        error(test)
                     }
                 }
                 stage('Loading Environment Configuration') {
@@ -26,35 +30,53 @@ pipeline {
                             COMPOSER_PROJECT_NAME = ''
                             SECRET_FILE_CREDENTIALS_ID = ''
                             APP_PORT = ''
+
+                            if (!fileExists('jenkins.config')) {
+                                error("File jenkins.config not found!")
+                            }
                             def config = load 'jenkins.config'
 
-                            // Use the value in subsequent steps
-                            echo "Value of 'Project Name': ${config.project_name}"
-                            config.deployData.each { environment, data ->
-                                // Access environment-specific data
-                                def user = data.user
-                                def host = data.host
-                                def path = data.path
+                            if(!env.BRANCH_NAME) {
+                                error("Enviromnment variable BRANCH_NAME is unavailable.  Contact the developer.")
+                            }
 
-                                // Perform operations based on the environment data
-                                echo "Deploying to ${environment} environment"
-                                echo "User: ${user}"
-                                echo "Host: ${host}"
-                                echo "Path: ${path}"
+                            if (!config.environments || config.environments.isEmpty()) {
+                                error("Environments hasn't been setup in config.")
+                            }
 
-                                // Additional operations...
+                            def valid_branch = null
+
+                            config.environments.eachWithBreak { environment, data ->
+
+                                if (data.branch_name && env.BRANCH_NAME == data.branch_name) {
+                                    valid_branch = true
+                                    return false // Exit the loop
                                 }
+                                return true // Continue to the next iteration
+                            
+                            }
 
-                            config.environments.each { environment, data ->
-                                // Access environment-specific data
-                                def repo_name = data.repo_name
-                                def require_confirmation = data.require_confirmation
+                            if(!valid_branch)
+                            {
+                                error("No valid environment detected for branch ${env.BRANCH_NAME} in jenkins.config. Failing the pipeline.")
+                            }
+                            
 
-                                // Perform operations based on the environment data
-                                echo "Checking ${environment} environment"
-                                echo "repo_name: ${repo_name}"
-                                echo "require_confirmation: ${require_confirmation}"
-                                }
+
+
+                            //if(!config.environments."${env.BRANCH_NAME}".containsKey()
+                            // config.environments.each { environment, data ->
+
+                            //     if(env.BRANCH_NAME == repo_name)
+                            //     // Access environment-specific data
+                            //     def repo_name = data.repo_name
+                            //     def require_confirmation = data.require_confirmation
+
+                            //     // Perform operations based on the environment data
+                            //     echo "Checking ${environment} environment"
+                            //     echo "repo_name: ${repo_name}"
+                            //     echo "require_confirmation: ${require_confirmation}"
+                            //     }
                         }
                     }
                 }
