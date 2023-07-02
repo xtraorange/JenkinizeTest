@@ -44,6 +44,17 @@ pipeline {
 
                                 // Additional operations...
                                 }
+
+                            config.environments.each { environment, data ->
+                                // Access environment-specific data
+                                def repo_name = data.repo_name
+                                def require_confirmation = data.require_confirmation
+
+                                // Perform operations based on the environment data
+                                echo "Checking ${environment} environment"
+                                echo "repo_name: ${repo_name}"
+                                echo "require_confirmation: ${require_confirmation}"
+                                }
                         }
                     }
                 }
