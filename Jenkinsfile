@@ -30,7 +30,7 @@ pipeline {
 
                             // Use the value in subsequent steps
                             echo "Value of 'Project Name': ${config.project_name}"
-                            deployData.each { environment, data ->
+                            config.deployData.each { environment, data ->
                                 // Access environment-specific data
                                 def user = data.user
                                 def host = data.host
