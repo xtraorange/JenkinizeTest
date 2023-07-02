@@ -1,4 +1,11 @@
-def test = 'it worked!'
+def environment = null
+def environment_parameters = []
+
+def project_name = 'Unknown Project'
+def project_name_clean =  null
+
+def names = []
+def paths = []
 
 pipeline {
     agent any
@@ -13,28 +20,28 @@ pipeline {
                     steps {
                         cleanWs()
                         checkout scm
-
-                        error(test)
                     }
                 }
-                stage('Loading Environment Configuration') {
+                stage('Loading Environment and Configuration') {
                     steps {
                         script {
-                            PROJECT_NAME = 'UnknownProject'
-                            BASE_NAME = ''
-                            JENKINS_DEPLOY_DIRECTORY = ''
-                            CODEBASE_VOLUME_NAME = ''
-                            CURRENT_ENV = ''
-                            CONTAINER_NAME = ''
-                            NETWORK_NAME = ''
-                            COMPOSER_PROJECT_NAME = ''
-                            SECRET_FILE_CREDENTIALS_ID = ''
-                            APP_PORT = ''
 
                             if (!fileExists('jenkins.config')) {
                                 error("File jenkins.config not found!")
                             }
                             def config = load 'jenkins.config'
+
+
+                            if(config.project_name)
+                                project_name = config.project_name
+                            else
+                                project_name = 'Laravel Project'
+
+                            project_name_clean = project_name.toLowerCase().replace(' ', '_')
+
+                            echo "Project name has been set to ${project_name}"
+
+
 
                             if(!env.BRANCH_NAME) {
                                 error("Enviromnment variable BRANCH_NAME is unavailable.  Contact the developer.")
@@ -44,78 +51,37 @@ pipeline {
                                 error("Environments hasn't been setup in config.")
                             }
 
-                            def valid_branch = null
 
-                            config.environments.eachWithBreak { environment, data ->
+                            config.environments.eachWithBreak { environment_key, data ->
 
                                 if (data.branch_name && env.BRANCH_NAME == data.branch_name) {
-                                    valid_branch = true
+                                    environment = environment_key
+                                    environment_parameters = data
                                     return false // Exit the loop
                                 }
                                 return true // Continue to the next iteration
                             
                             }
 
-                            if(!valid_branch)
-                            {
+                            if(!environment){
                                 error("No valid environment detected for branch ${env.BRANCH_NAME} in jenkins.config. Failing the pipeline.")
                             }
+
+
+
+                            names.base_name = "${project_name_clean}_${environment}"
+                            names.container_name = "${names.base_name}_app"
+                            names.network_name = "${names.base_name}_network"
                             
+                            names.codebase_volume_name = "${names.base_name}_codebase"
+
+                            names.composer_project_name = "${names.base_name}"
+                            names.secret_file_credentials_id = "${names.base_name}_env"
+                            
+                            paths.jenkins_deploy_directory = "var/deploy/${environment}/${environment}"
 
 
 
-                            //if(!config.environments."${env.BRANCH_NAME}".containsKey()
-                            // config.environments.each { environment, data ->
-
-                            //     if(env.BRANCH_NAME == repo_name)
-                            //     // Access environment-specific data
-                            //     def repo_name = data.repo_name
-                            //     def require_confirmation = data.require_confirmation
-
-                            //     // Perform operations based on the environment data
-                            //     echo "Checking ${environment} environment"
-                            //     echo "repo_name: ${repo_name}"
-                            //     echo "require_confirmation: ${require_confirmation}"
-                            //     }
-                        }
-                    }
-                }
-                stage('Determining Environment and Updating Env Vars') {
-                    steps {
-                        script {
-                            switch (env.BRANCH_NAME) {
-                                case 'test':
-                                CURRENT_ENV = 'test'
-                                echo "Detected branch: ${env.BRANCH_NAME}. Setting environment to 'test'."
-                                break case 'stage':
-                                CURRENT_ENV = 'stage'
-                                echo "Detected branch: ${env.BRANCH_NAME}. Setting environment to 'stage'."
-                                break case 'main':
-                                CURRENT_ENV = 'prod'
-                                echo "Detected branch: ${env.BRANCH_NAME}. Setting environment to 'prod'."
-                                break default:
-                                CURRENT_ENV = null
-                                echo "Detected branch: ${env.BRANCH_NAME}. Skipping remaining steps."
-                            }
-                            if (CURRENT_ENV == null) {
-                                error("No valid environment detected for branch ${env.BRANCH_NAME}. Failing the pipeline.")
-                            }
-
-                            BASE_NAME = "${PROJECT_NAME}_${CURRENT_ENV}"
-                            CONTAINER_NAME = "${BASE_NAME}_app"
-                            NETWORK_NAME = "${BASE_NAME}_network"
-                            CODEBASE_VOLUME_NAME = "${BASE_NAME}_codebase"
-                            JENKINS_DEPLOY_DIRECTORY = "var/deploy/${CURRENT_ENV}/${CURRENT_ENV}"
-                            COMPOSER_PROJECT_NAME = "${BASE_NAME}"
-                            SECRET_FILE_CREDENTIALS_ID = "${BASE_NAME}_env"
-                            switch (CURRENT_ENV) {
-                                case 'test':
-                                    APP_PORT = '8002'
-                                break case 'stage':
-                                    APP_PORT = '8001'
-                                break case 'prod':
-                                    APP_PORT = '8000'
-                            }  
                         }
                     }
                 }
@@ -123,12 +89,12 @@ pipeline {
                 stage('Confirm Production Deployment') {
                     when {
                         expression {
-                            CURRENT_ENV == 'prod'
+                            environment_parameters.require_confirmation
                         }
                     }
                     steps {
                         script {
-                            echo 'Skipping for debugging...'
+                            echo 'Normally, this would be where you would confirm the deployment, but it\'s currently turned off.'
                             //input(message: 'Are you sure you want to deploy to production?')
                             //asdf
                         }
@@ -137,6 +103,7 @@ pipeline {
                 stage('Sync Code') {
                     steps {
                         script {
+                            error('stopping the pipeline here')
                             echo "Contents of the source directory:"
                             sh "ls -la"
                             sh "mkdir -p ${JENKINS_DEPLOY_DIRECTORY}"
