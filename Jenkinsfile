@@ -212,7 +212,16 @@ pipeline {
                         script {
                             def envFilePath = "/var/www/html/.env.${names.environment_name_clean}"
                             echo "Renaming ${envFilePath} to /var/www/html/.env"
-                            sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
+                            //sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
+                            
+                            def fileExistsOutput = sh(script: "docker exec ${names.container_name} test -f ${envFilePath} && echo 'true' || echo 'false'", returnStdout: true).trim()
+
+                            if (fileExistsOutput == 'true') {
+                                sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
+                                echo "File renamed successfully."
+                            } else {
+                                error("The .env file for this environment does not exist.  It should be named '.env.${names.environment_name_clean}'") 
+                            }
                         }
                     }
                 }
