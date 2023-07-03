@@ -210,7 +210,7 @@ pipeline {
                 stage('Rename Environment File') {
                     steps {
                         script {
-                            def envFilePath = "/var/www/html/.env.${CURRENT_ENV}"
+                            def envFilePath = "/var/www/html/.env.${names.environment_name_clean}"
                             echo "Renaming ${envFilePath} to /var/www/html/.env"
                             sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
                         }
