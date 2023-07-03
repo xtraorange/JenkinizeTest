@@ -2,6 +2,7 @@ def environment_parameters = []
 
 def project_name = 'Unknown Project'
 def project_name_clean =  null
+def app_port = 8080
 
 def names = [:]
 def paths = [:]
@@ -83,6 +84,17 @@ pipeline {
                                 names.environment_name = environment
                             
                             names.environment_name_clean = names.environment_name.toLowerCase().replace(' ', '_')
+
+                            
+                            if(environment_paramters.app_port){
+                                app_port = environment_parameters.port
+                                echo "Port found in environment parameters: ${app_port}"
+                            }
+                            else {
+                                echo "No port found in environment parameters, using default: ${app_port}"
+                            }
+
+
 
 
                             names.base_name = "${project_name_clean}_${names.environment_name_clean}"
@@ -184,7 +196,7 @@ pipeline {
                     steps {
                         script {
                             echo "Starting new container: ${names.container_name}"
-                            sh "export names.container_name=${names.container_name} && export APP_PORT=${APP_PORT} && docker-compose -p ${COMPOSER_PROJECT_NAME} -f docker-compose.yml up -d"
+                            sh "export names.container_name=${names.container_name} && export APP_PORT=${app_port} && docker-compose -p ${names.composer_project_name} -f docker-compose.yml up -d"
                         }
                     }
                 }
