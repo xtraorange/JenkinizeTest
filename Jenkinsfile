@@ -87,7 +87,7 @@ pipeline {
 
                             
                             if(environment_paramters.app_port){
-                                app_port = environment_parameters.port
+                                app_port = environment_parameters.app_port
                                 echo "Port found in environment parameters: ${app_port}"
                             }
                             else {
