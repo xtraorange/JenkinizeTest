@@ -4,8 +4,8 @@ def environment_parameters = []
 def project_name = 'Unknown Project'
 def project_name_clean =  null
 
-def names = []
-def paths = []
+def names = new ArrayList()
+def paths = new ArrayList()
 
 pipeline {
     agent any
