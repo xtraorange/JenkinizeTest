@@ -32,14 +32,19 @@ pipeline {
                             def config = load 'jenkins.config'
 
 
-                            if(config.project_name)
+                            if(config.project_name){
                                 project_name = config.project_name
-                            else
+                                echo "Project name has been set in config as ${project_name}"
+                            }
+                            else {
                                 project_name = 'Laravel Project'
+                                echo "Project name has not been set in config, defaulting to ${project_name}"
+                            }
+                            
 
                             project_name_clean = project_name.toLowerCase().replace(' ', '_')
-
-                            echo "Project name has been set to ${project_name}"
+                            echo "Project \"clean\" name has set to ${project_name_clean}"
+                            
 
 
 
@@ -60,6 +65,7 @@ pipeline {
                                     ) {
                                         environment = environment_key
                                         environment_parameters = data
+                                        echo "Environment has been matched to the config: ${environment} with the parameters ${environment_parameters}"
                                     }
                                     
                                 }
@@ -83,6 +89,8 @@ pipeline {
                             
                             paths.jenkins_deploy_directory = "var/deploy/${environment}/${environment}"
 
+                            echo "Name variables have been set: ${names}"
+                            echo "Path variables have been set: ${paths}"
 
 
                         }
