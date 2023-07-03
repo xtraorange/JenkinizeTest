@@ -51,15 +51,13 @@ pipeline {
                                 error("Environments hasn't been setup in config.")
                             }
 
+                            environment = null
+                            config.environments.each { environment_key, data ->
 
-                            config.environments.eachWithBreak { environment_key, data ->
-
-                                if (data.branch_name && env.BRANCH_NAME == data.branch_name) {
+                                if (!environment && data.branch_name && env.BRANCH_NAME == data.branch_name) {
                                     environment = environment_key
                                     environment_parameters = data
-                                    return false // Exit the loop
                                 }
-                                return true // Continue to the next iteration
                             
                             }
 
