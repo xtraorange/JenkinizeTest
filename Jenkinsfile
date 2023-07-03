@@ -196,7 +196,7 @@ pipeline {
                     steps {
                         script {
                             echo "Starting new container: ${names.container_name}"
-                            sh "export names.container_name=${names.container_name} && export APP_PORT=${app_port} && docker-compose -p ${names.composer_project_name} -f docker-compose.yml up -d"
+                            sh "export CONTAINER_NAME=${names.container_name} && export APP_PORT=${app_port} && docker-compose -p ${names.composer_project_name} -f docker-compose.yml up -d"
                         }
                     }
                 }
