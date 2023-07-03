@@ -1,4 +1,3 @@
-def environment = null
 def environment_parameters = []
 
 def project_name = 'Unknown Project'
@@ -49,23 +48,24 @@ pipeline {
 
 
                             if(!env.BRANCH_NAME) {
-                                error("Enviromnment variable BRANCH_NAME is unavailable.  Contact the developer.")
+                                error("Environment variable BRANCH_NAME is unavailable.  Contact the developer.")
                             }
 
                             if (!config.environments || config.environments.isEmpty()) {
                                 error("Environments hasn't been setup in config.")
                             }
 
-                            environment = null
-                            config.environments.each { environment_key, data ->
+                            def environment = null
+                            config.environments.each { environment_key, parameters ->
 
                                 if (!environment) {
-                                    if((data.branch_name && env.BRANCH_NAME == data.branch_name) ||
-                                    (!data.branch_name && env.BRANCH_NAME == environment_key)
+                                    if((parameters.branch_name && env.BRANCH_NAME == parameters.branch_name) ||
+                                    (!parameters.branch_name && env.BRANCH_NAME == environment_key)
                                     ) {
+                                        names.branch_name = env.BRANCH_NAME
+                                        environment_parameters = parameters
                                         environment = environment_key
-                                        environment_parameters = data
-                                        echo "Environment has been matched to the config: ${environment} with the parameters ${environment_parameters}"
+                                        echo "Environment has been matched to the config: '${environment}' with the parameters: ${environment_parameters}"
                                     }
                                     
                                 }
@@ -73,18 +73,19 @@ pipeline {
                             }
 
                             if(!environment){
-                                error("No valid environment detected for branch ${env.BRANCH_NAME} in jenkins.config. Failing the pipeline.")
+                                error("No valid environment detected for branch '${env.BRANCH_NAME}' in jenkins.config. Failing the pipeline.")
                             }
 
                             
-                            if(data.environment_name)
-                                names.environment_name = data.environment_name
+                            if(environment_parameters.environment_name)
+                                names.environment_name = environment_parameters.environment_name
                             else
                                 names.environment_name = environment
+                            
+                            names.environment_name_clean = names.environment_name.toLowerCase().replace(' ', '_')
 
 
-
-                            names.base_name = "${project_name_clean}_${environment}"
+                            names.base_name = "${project_name_clean}_${names.environment_name_clean}"
 
                             names.container_name = "${names.base_name}_app"
                             names.network_name = "${names.base_name}_network" 
@@ -93,7 +94,7 @@ pipeline {
                             names.composer_project_name = "${names.base_name}"
                             names.secret_file_credentials_id = "${names.base_name}_env"
                             
-                            paths.jenkins_deploy_directory = "var/deploy/${environment}/${environment}"
+                            paths.jenkins_deploy_directory = "var/deploy/${names.environment_name_clean}/${names.environment_name_clean}"
 
                             echo "Name variables have been set: ${names}"
                             echo "Path variables have been set: ${paths}"
@@ -112,7 +113,7 @@ pipeline {
                     steps {
                         script {
                             
-                            input(message: 'Are you sure you want to deploy to ${environment}?')
+                            input(message: 'Are you sure you want to deploy to ${names.environment_name}?')
                             //asdf
                         }
                     }
