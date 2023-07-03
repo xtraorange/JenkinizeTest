@@ -54,9 +54,14 @@ pipeline {
                             environment = null
                             config.environments.each { environment_key, data ->
 
-                                if (!environment && data.branch_name && env.BRANCH_NAME == data.branch_name) {
-                                    environment = environment_key
-                                    environment_parameters = data
+                                if (!environment) {
+                                    if((data.branch_name && env.BRANCH_NAME == data.branch_name) ||
+                                    (!data.branch_name && env.BRANCH_NAME == environment_key)
+                                    ) {
+                                        environment = environment_key
+                                        environment_parameters = data
+                                    }
+                                    
                                 }
                             
                             }
