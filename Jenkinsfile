@@ -86,7 +86,7 @@ pipeline {
                             names.environment_name_clean = names.environment_name.toLowerCase().replace(' ', '_')
 
                             
-                            if(environment_paramters.app_port){
+                            if(environment_parameters.app_port){
                                 app_port = environment_parameters.app_port
                                 echo "Port found in environment parameters: ${app_port}"
                             }
