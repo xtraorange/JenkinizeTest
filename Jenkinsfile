@@ -235,22 +235,10 @@ pipeline {
                             sh "docker exec ${names.container_name} chown www-data:www-data /var/www/html/.env"
                             sh "docker exec ${names.container_name} chmod 664 /var/www/html/.env"
                             // Append the secret file to .env
-                             def secretFile = null
-                            def secretFilePath = null
-
-                            try {
-                                // Retrieve the secret file path
-                                secretFilePath = credentials("${names.secret_file_credentials_id}")
-                                // Copy the secret file locally
-                                secretFile = file(secretFilePath)
-                            } catch (Exception e) {
-                                echo "Error retrieving secret file: ${e.getMessage()}"
-                            }
-
-                            // Execute the command if the secret file exists
-                            if (secretFile) {
-                                sh "docker exec -i ${names.container_name} bash -c 'cat >> /var/www/html/.env' < ${secretFile}"
-                                echo "Command executed successfully."
+                            catchError {
+                                withCredentials([file(credentialsId: "${names.secret_file_credentials_id}", variable: 'SECRET_FILE')]) {
+                                    sh "docker exec -i ${names.container_name} bash -c 'cat >> /var/www/html/.env' < ${SECRET_FILE}"
+                                }
                             }
                             // Restore the original permissions and ownership
                             sh "docker exec ${names.container_name} chown ${originalOwnership} /var/www/html/.env"
