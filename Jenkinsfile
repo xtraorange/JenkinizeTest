@@ -1,4 +1,4 @@
-def environment_parameters = []
+def environment_parameters = [:]
 
 def project_name = 'Unknown Project'
 def project_name_clean =  null
@@ -40,11 +40,11 @@ pipeline {
                                 project_name = 'Laravel Project'
                                 echo "Project name has not been set in config, defaulting to ${project_name}"
                             }
-                            
+
 
                             project_name_clean = project_name.toLowerCase().replace(' ', '_')
                             echo "Project \"clean\" name has set to ${project_name_clean}"
-                            
+
 
 
 
@@ -68,24 +68,24 @@ pipeline {
                                         environment = environment_key
                                         echo "Environment has been matched to the config: '${environment}' with the parameters: ${environment_parameters}"
                                     }
-                                    
+
                                 }
-                            
+
                             }
 
                             if(!environment){
                                 error("No valid environment detected for branch '${env.BRANCH_NAME}' in jenkins.config. Failing the pipeline.")
                             }
 
-                            
+
                             if(environment_parameters.environment_name)
                                 names.environment_name = environment_parameters.environment_name
                             else
                                 names.environment_name = environment
-                            
+
                             names.environment_name_clean = names.environment_name.toLowerCase().replace(' ', '_')
 
-                            
+
                             if(environment_parameters.app_port){
                                 app_port = environment_parameters.app_port
                                 echo "Port found in environment parameters: ${app_port}"
@@ -99,14 +99,20 @@ pipeline {
 
                             names.base_name = "${project_name_clean}_${names.environment_name_clean}"
 
-                            names.container_name = "${names.base_name}_app"
-                            names.network_name = "${names.base_name}_network" 
+                            names.app_container_name = "${names.base_name}_app"
+                            names.network_name = "${names.base_name}_network"
                             names.codebase_volume_name = "${names.base_name}_codebase"
 
                             names.composer_project_name = "${names.base_name}"
                             names.secret_file_credentials_id = "${names.base_name}_env"
-                            
+
                             paths.jenkins_deploy_directory = "var/deploy/${names.environment_name_clean}/${names.environment_name_clean}"
+                            paths.dockerfile = config.dockerfile
+                            paths.docker_compose_file = config.docker_compose_file
+
+                            paths.app_codebase_directory = "/var/www/html/"
+                            paths.app_env_file = "${paths.app_codebase_directory}.env"
+
 
                             echo "Name variables have been set: ${names}"
                             echo "Path variables have been set: ${paths}"
@@ -116,7 +122,7 @@ pipeline {
                     }
                 }
 
-                stage('Confirm Production Deployment') {
+                stage('Confirm Deployment') {
                     when {
                         expression {
                             environment_parameters.require_confirmation
@@ -124,8 +130,8 @@ pipeline {
                     }
                     steps {
                         script {
-                            
-                            input(message: 'Are you sure you want to deploy to ${names.environment_name}?')
+
+                            input(message: "Are you sure you want to deploy to ${names.environment_name}?")
                             //asdf
                         }
                     }
@@ -145,15 +151,15 @@ pipeline {
                 stage('Build Docker Image') {
                     steps {
                         script {
-                            def imageExistsOutput = sh(script: "docker images -q ${names.container_name}:latest | wc -l", returnStdout: true).trim().toInteger()
+                            def imageExistsOutput = sh(script: "docker images -q ${names.app_container_name}:latest | wc -l", returnStdout: true).trim().toInteger()
                             def dockerfileChangedOutput = sh(script: "git diff HEAD^ HEAD --name-only | grep Dockerfile | wc -l", returnStdout: true).trim().toInteger()
                             def imageExists = imageExistsOutput > 0
                             def dockerfileChanged = dockerfileChangedOutput > 0
                             if (!imageExists || dockerfileChanged) {
-                                echo "Building Docker image: ${names.container_name}"
-                                sh "docker build -t ${names.container_name} ."
+                                echo "Building Docker image: ${names.app_container_name}"
+                                sh "docker build -t ${names.app_container_name} -f ${paths.dockerfile} ."
                             } else {
-                                echo "Docker image ${names.container_name} is up to date. Skipping build."
+                                echo "Docker image ${names.app_container_name} is up to date. Skipping build."
                             }
                         }
                     }
@@ -165,16 +171,16 @@ pipeline {
                 stage('Stop Old Container') {
                     steps {
                         script {
-                            echo "Stopping old container: ${names.container_name}"
-                            sh "docker stop ${names.container_name} || true"
-                            sh "docker rm ${names.container_name} || true"
+                            echo "Stopping old container: ${names.app_container_name}"
+                            sh "docker stop ${names.app_container_name} || true"
+                            sh "docker rm ${names.app_container_name} || true"
                         }
                     }
                 }
                 stage('Delete and recreate the codebase volume.') {
                     steps {
                         script {
-                            echo "Recreating codebase volume for: ${names.container_name}"
+                            echo "Recreating codebase volume for: ${names.app_container_name}"
                             sh "docker volume rm ${names.codebase_volume_name} || true"
                             sh "docker volume create --name ${names.codebase_volume_name}"
                         }
@@ -195,32 +201,31 @@ pipeline {
                 stage('Start New Container') {
                     steps {
                         script {
-                            echo "Starting new container: ${names.container_name}"
-                            sh "export CONTAINER_NAME=${names.container_name} && export APP_PORT=${app_port} && docker-compose -p ${names.composer_project_name} -f docker-compose.yml up -d"
+                            echo "Starting new container: ${names.app_container_name}"
+                            sh "export CONTAINER_NAME=${names.app_container_name} && export APP_PORT=${app_port} && docker-compose -p ${names.composer_project_name} -f ${paths.docker_compose_file} up -d"
                         }
                     }
                 }
                 stage('Copy Code to Deployment Environment') {
                     steps {
                         script {
-                            sh "docker cp ${paths.jenkins_deploy_directory}/. ${names.container_name}:/var/www/html/"
+                            sh "docker cp ${paths.jenkins_deploy_directory}/. ${names.app_container_name}:/var/www/html/"
                         }
                     }
                 }
                 stage('Rename Environment File') {
                     steps {
                         script {
-                            def envFilePath = "/var/www/html/.env.${names.environment_name_clean}"
-                            echo "Renaming ${envFilePath} to /var/www/html/.env"
-                            //sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
-                            
-                            def fileExistsOutput = sh(script: "docker exec ${names.container_name} test -f ${envFilePath} && echo 'true' || echo 'false'", returnStdout: true).trim()
+                            def envFilePath = "${paths.app_codebase_directory}.env.${names.environment_name_clean}"
+                            echo "Renaming ${envFilePath} to ${paths.app_env_file}"
+
+                            def fileExistsOutput = sh(script: "docker exec ${names.app_container_name} test -f ${envFilePath} && echo 'true' || echo 'false'", returnStdout: true).trim()
 
                             if (fileExistsOutput == 'true') {
-                                sh "docker exec ${names.container_name} mv ${envFilePath} /var/www/html/.env"
+                                sh "docker exec ${names.app_container_name} mv ${envFilePath} ${paths.app_env_file}"
                                 echo "File renamed successfully."
                             } else {
-                                error("The .env file for this environment does not exist.  It should be named '.env.${names.environment_name_clean}'") 
+                                error("The .env file for this environment does not exist.  It should be named '.env.${names.environment_name_clean}'")
                             }
                         }
                     }
@@ -229,37 +234,37 @@ pipeline {
                     steps {
                         script {
                             // Store the original permissions and ownership
-                            def originalPermissions = sh(script: "docker exec ${names.container_name} stat -c '%a' /var/www/html/.env", returnStdout: true).trim()
-                            def originalOwnership = sh(script: "docker exec ${names.container_name} ls -l /var/www/html/.env | awk '{print \$3\":\"\$4}'", returnStdout: true).trim()
+                            def originalPermissions = sh(script: "docker exec ${names.app_container_name} stat -c '%a' ${paths.app_env_file}", returnStdout: true).trim()
+                            def originalOwnership = sh(script: "docker exec ${names.app_container_name} ls -l ${paths.app_env_file} | awk '{print \$3\":\"\$4}'", returnStdout: true).trim()
                             // Change the ownership and permissions of the .env file
-                            sh "docker exec ${names.container_name} chown www-data:www-data /var/www/html/.env"
-                            sh "docker exec ${names.container_name} chmod 664 /var/www/html/.env"
+                            sh "docker exec ${names.app_container_name} chown www-data:www-data ${paths.app_env_file}"
+                            sh "docker exec ${names.app_container_name} chmod 664 ${paths.app_env_file}"
                             // Append the secret file to .env
                             catchError {
                                 withCredentials([file(credentialsId: "${names.secret_file_credentials_id}", variable: 'SECRET_FILE')]) {
-                                    sh "docker exec -i ${names.container_name} bash -c 'cat >> /var/www/html/.env' < ${SECRET_FILE}"
+                                    sh "docker exec -i ${names.app_container_name} bash -c 'cat >> ${paths.app_env_file}' < ${SECRET_FILE}"
                                 }
                             }
                             // Restore the original permissions and ownership
-                            sh "docker exec ${names.container_name} chown ${originalOwnership} /var/www/html/.env"
-                            sh "docker exec ${names.container_name} chmod ${originalPermissions} /var/www/html/.env"
+                            sh "docker exec ${names.app_container_name} chown ${originalOwnership} ${paths.app_env_file}"
+                            sh "docker exec ${names.app_container_name} chmod ${originalPermissions} ${paths.app_env_file}"
                         }
                     }
                 }
                 stage('Fix Storage Permissions') {
                     steps {
                         script {
-                            sh "docker exec ${names.container_name} chown -R www-data:www-data /var/www/html/storage"
-                            sh "docker exec ${names.container_name} chown -R www-data:www-data /var/www/html/bootstrap/cache"
-                            sh "docker exec ${names.container_name} chmod -R 775 /var/www/html/storage"
-                            sh "docker exec ${names.container_name} chmod -R 775 /var/www/html/bootstrap/cache"
+                            sh "docker exec ${names.app_container_name} chown -R www-data:www-data ${paths.app_codebase_directory}storage"
+                            sh "docker exec ${names.app_container_name} chown -R www-data:www-data ${paths.app_codebase_directory}bootstrap/cache"
+                            sh "docker exec ${names.app_container_name} chmod -R 775 ${paths.app_codebase_directory}storage"
+                            sh "docker exec ${names.app_container_name} chmod -R 775 ${paths.app_codebase_directory}bootstrap/cache"
                         }
                     }
                 }
                 stage('Composer Install') {
                     steps {
                         script {
-                            sh "docker exec ${names.container_name} composer install"
+                            sh "docker exec ${names.app_container_name} composer install"
                         }
                     }
                 }
@@ -271,7 +276,7 @@ pipeline {
                     steps {
                         script {
                             echo "Migrating"
-                            sh "docker exec -w /var/www/html ${names.container_name} php artisan migrate --force"
+                            sh "docker exec -w /var/www/html ${names.app_container_name} php artisan migrate --force"
                         }
                     }
                 }
@@ -279,9 +284,9 @@ pipeline {
                     steps {
                         script {
                             echo "Running Other Tasks"
-                            sh "docker exec -w /var/www/html ${names.container_name} php artisan config:cache"
-                            sh "docker exec -w /var/www/html ${names.container_name} php artisan route:cache"
-                            sh "docker exec -w /var/www/html ${names.container_name} php artisan view:cache"
+                            sh "docker exec -w ${paths.app_codebase_directory} ${names.app_container_name} php artisan config:cache"
+                            sh "docker exec -w ${paths.app_codebase_directory} ${names.app_container_name} php artisan route:cache"
+                            sh "docker exec -w ${paths.app_codebase_directory} ${names.app_container_name} php artisan view:cache"
                         }
                     }
                 }
