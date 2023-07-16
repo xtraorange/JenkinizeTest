@@ -1,3 +1,5 @@
+def jenize_config = 'jenkinize.config'
+
 def environment_parameters = [:]
 
 def project_name = 'Unknown Project'
@@ -26,10 +28,10 @@ pipeline {
                     steps {
                         script {
 
-                            if (!fileExists('jenkins.config')) {
-                                error("File jenkins.config not found!")
+                            if (!fileExists(jenize_config)) {
+                                error("File ${jenize_config} not found!")
                             }
-                            def config = load 'jenkins.config'
+                            def config = load jenize_config
 
 
                             if(config.project_name){
